@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import db from '../../database/db';
 
-export default function PageView() {
-    const { slug } = useParams();
+export default function PageView({ slug: propSlug }) {
+    const params = useParams();
+    const slug = propSlug || params.slug;
     const [page, setPage] = useState(null);
     const [loading, setLoading] = useState(true);
 

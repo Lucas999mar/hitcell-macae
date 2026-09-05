@@ -34,6 +34,7 @@ import AdminStock from './pages/admin/AdminStock';
 import AdminClients from './pages/admin/AdminClients';
 import AdminSite from './pages/admin/AdminSite';
 import AdminSettings from './pages/admin/AdminSettings';
+import AdminPlaceholder from './pages/admin/AdminPlaceholder';
 
 function PublicLayout({ children }) {
   return (
@@ -68,10 +69,15 @@ export default function App() {
                 <Route path="clientes" element={<AdminClients />} />
                 <Route path="site" element={<AdminSite />} />
                 <Route path="configuracoes" element={<AdminSettings />} />
+                <Route path="fornecedores" element={<AdminPlaceholder title="🏭 Fornecedores" />} />
+                <Route path="cupons" element={<AdminPlaceholder title="🏷️ Cupons" />} />
+                <Route path="funcionarios" element={<AdminPlaceholder title="👔 Funcionários" />} />
+                <Route path="pagamentos" element={<AdminPlaceholder title="💳 Integrações de Pagamento" />} />
               </Route>
 
               {/* PUBLIC ROUTES */}
               <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
+              <Route path="/sobre" element={<PublicLayout><PageView slug="sobre" /></PublicLayout>} />
               <Route path="/loja" element={<PublicLayout><Shop /></PublicLayout>} />
               <Route path="/produto/:id" element={<PublicLayout><ProductPage /></PublicLayout>} />
               <Route path="/categorias" element={<PublicLayout><Categories /></PublicLayout>} />
