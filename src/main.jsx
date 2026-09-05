@@ -2,10 +2,10 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import './index.css';
-import { seedInitialData } from './database/seed';
+import { seedDatabase } from './database/seed.js';
 
 // Initialize Database automatically on app start
-seedInitialData().then(() => {
+seedDatabase().then(() => {
   ReactDOM.createRoot(document.getElementById('root')).render(
     <React.StrictMode>
       <App />
