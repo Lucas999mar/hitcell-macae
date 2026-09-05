@@ -1,0 +1,140 @@
+.footer {
+    background: var(--black-soft);
+    border-top: 1px solid var(--gray-800);
+    padding: 60px 0 0;
+    margin-top: 80px;
+}
+
+.footer-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr 1fr 1.2fr;
+    gap: 40px;
+}
+
+.footer-logo {
+    font-size: 1.8rem;
+    font-weight: 900;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.footer-logo-sub {
+    font-size: 1rem;
+    color: var(--red);
+    font-weight: 600;
+}
+
+.footer-desc {
+    color: var(--gray-400);
+    font-size: 0.92rem;
+    line-height: 1.7;
+    margin-bottom: 20px;
+}
+
+.footer-social {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.footer-social-link {
+    padding: 8px 16px;
+    border-radius: var(--radius-full);
+    font-size: 0.82rem;
+    font-weight: 600;
+    transition: all var(--transition-fast);
+}
+
+.footer-social-link.whatsapp {
+    background: rgba(37, 211, 102, 0.15);
+    color: #25d366;
+}
+
+.footer-social-link.whatsapp:hover {
+    background: #25d366;
+    color: var(--white);
+}
+
+.footer-social-link.instagram {
+    background: rgba(225, 48, 108, 0.15);
+    color: #e1306c;
+}
+
+.footer-social-link.instagram:hover {
+    background: #e1306c;
+    color: var(--white);
+}
+
+.footer-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--white);
+    margin-bottom: 20px;
+}
+
+.footer-link {
+    display: block;
+    color: var(--gray-400);
+    font-size: 0.9rem;
+    padding: 6px 0;
+    transition: color var(--transition-fast);
+}
+
+.footer-link:hover {
+    color: var(--red);
+}
+
+.footer-info {
+    display: flex;
+    gap: 10px;
+    color: var(--gray-400);
+    font-size: 0.88rem;
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+
+.footer-payment-icons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.payment-icon {
+    padding: 4px 10px;
+    background: var(--gray-800);
+    border-radius: var(--radius-sm);
+    font-size: 0.78rem;
+    color: var(--gray-300);
+}
+
+.footer-bottom {
+    margin-top: 40px;
+    padding: 20px 0;
+    border-top: 1px solid var(--gray-800);
+    text-align: center;
+    color: var(--gray-500);
+    font-size: 0.82rem;
+}
+
+.footer-privacy {
+    margin-top: 6px;
+}
+
+.footer-privacy a {
+    color: var(--red);
+}
+
+@media (max-width: 768px) {
+    .footer-grid {
+        grid-template-columns: 1fr;
+        gap: 30px;
+    }
+
+    .footer {
+        padding: 40px 0 0;
+    }
+}
