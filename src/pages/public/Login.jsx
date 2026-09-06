@@ -18,7 +18,8 @@ export default function Login() {
         try {
             const user = await login(email, password);
             toast.success(`Bem-vindo, ${user.name}!`);
-            if (user.type === 'employee') navigate('/admin');
+            const isUserAdmin = user.type === 'employee' || user.type === 'admin' || user.role_id?.startsWith('role-');
+            if (isUserAdmin) navigate('/admin');
             else navigate('/conta');
         } catch (err) { toast.error(err.message); }
         setLoading(false);

@@ -64,7 +64,7 @@ export default function Header() {
                 <div className="header-main">
                     <div className="container header-main-inner">
                         <Link to="/" className="header-logo">
-                            <img src="/images/logo-round.png" alt="HitCell Macaé" className="header-logo-img" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
+                            <img src="/images/logo-wide.png" alt="HitCell Macaé" className="header-logo-img" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
                             <div className="header-logo-fallback" style={{ display: 'none' }}>
                                 <span className="logo-hit">Hit</span><span className="logo-cell">Cell</span>
                             </div>

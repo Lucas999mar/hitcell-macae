@@ -8,7 +8,7 @@ export default function Footer() {
                 <div className="footer-grid">
                     <div className="footer-brand">
                         <Link to="/" className="footer-logo" style={{ textDecoration: 'none' }}>
-                            <img src="/images/logo-round.png" alt="HitCell Macaé" style={{ height: 48, objectFit: 'contain', marginBottom: 8 }} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
+                            <img src="/images/logo-wide.png" alt="HitCell Macaé" style={{ height: 56, objectFit: 'contain', marginBottom: 8 }} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
                             <div style={{ display: 'none', flexDirection: 'column' }}>
                                 <div><span className="logo-hit">Hit</span><span className="logo-cell">Cell</span></div>
                                 <span className="footer-logo-sub">Macaé</span>
