@@ -248,19 +248,22 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 1);
+    /* White bg ensures varying product photos look clean */
     overflow: hidden;
+    padding: 12px;
 }
 
 .product-image img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     transition: transform var(--transition-slow);
 }
 
 .product-card:hover .product-image img {
-    transform: scale(1.05);
+    transform: scale(1.08);
+    /* slightly more scale if it's contained */
 }
 
 .product-image-placeholder {
