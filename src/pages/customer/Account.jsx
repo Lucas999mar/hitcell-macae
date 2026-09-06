@@ -4,13 +4,15 @@ import db from '../../database/db';
 import { useToast } from '../../contexts/ToastContext';
 
 export default function Account() {
-    const { user, logout } = useAuth();
+    const { user, logout, loading: authLoading } = useAuth();
     const [tab, setTab] = useState('orders');
     const [orders, setOrders] = useState([]);
     const [services, setServices] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    if (!user) {
+    if (authLoading) return <div className="page-loader"><div className="loader"></div></div>;
+
+    if (!authLoading && !user) {
         if (typeof window !== 'undefined') window.location.href = '/login';
         return null;
     }

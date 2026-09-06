@@ -22,18 +22,19 @@ const menuItems = [
 ];
 
 export default function AdminLayout() {
-    const { user, isAdmin, logout } = useAuth();
+    const { user, isAdmin, logout, loading } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [mobileSidebar, setMobileSidebar] = useState(false);
 
     useEffect(() => {
-        if (!isAdmin) navigate('/login');
-    }, [isAdmin]);
+        if (!loading && !isAdmin) navigate('/login');
+    }, [loading, isAdmin, navigate]);
 
     useEffect(() => { setMobileSidebar(false); }, [location]);
 
+    if (loading) return <div className="page-loader"><div className="loader"></div></div>;
     if (!isAdmin) return null;
 
     return (

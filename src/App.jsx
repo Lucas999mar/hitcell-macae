@@ -35,6 +35,7 @@ import AdminClients from './pages/admin/AdminClients';
 import AdminSite from './pages/admin/AdminSite';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminPlaceholder from './pages/admin/AdminPlaceholder';
+import AdminIntegrations from './pages/admin/AdminIntegrations';
 
 function PublicLayout({ children }) {
   return (
@@ -72,7 +73,7 @@ export default function App() {
                 <Route path="fornecedores" element={<AdminPlaceholder title="🏭 Fornecedores" />} />
                 <Route path="cupons" element={<AdminPlaceholder title="🏷️ Cupons" />} />
                 <Route path="funcionarios" element={<AdminPlaceholder title="👔 Funcionários" />} />
-                <Route path="pagamentos" element={<AdminPlaceholder title="💳 Integrações de Pagamento" />} />
+                <Route path="pagamentos" element={<AdminIntegrations />} />
               </Route>
 
               {/* PUBLIC ROUTES */}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import db from '../../database/db';
+import db, { supabase } from '../../database/db';
 import { useToast } from '../../contexts/ToastContext';
 
 export default function AdminProducts() {
@@ -10,7 +10,8 @@ export default function AdminProducts() {
     const [search, setSearch] = useState('');
     const toast = useToast();
 
-    const emptyProduct = { name: '', description: '', category_id: '', brand: '', model: '', compatibility: [], colors: [], price: 0, cost: 0, promo_price: null, stock: 0, min_stock: 5, warranty: '', barcode: '', internal_code: '', active: true, featured: false, delivery_available: true, pickup_available: true, images: [], sales_count: 0 };
+    const [uploading, setUploading] = useState(false);
+    const emptyProduct = { name: '', description: '', category_id: '', brand: '', model: '', compatibility: [], colors: [], price: 0, cost: 0, promo_price: null, stock: 0, min_stock: 5, warranty: '', barcode: '', internal_code: '', active: true, featured: false, delivery_available: true, pickup_available: true, images: [], image_url: '', sales_count: 0 };
 
     useEffect(() => { loadAll(); }, []);
 
@@ -20,13 +21,35 @@ export default function AdminProducts() {
         setCategories(c.sort((a, b) => a.order - b.order));
     }
 
-    function openEdit(product) { setEditing({ ...product, colors: product.colors || [], compatibility: product.compatibility || [] }); setShowForm(true); }
+    function openEdit(product) { setEditing({ ...product, colors: product.colors || [], compatibility: product.compatibility || [], image_url: product.images?.[0] || product.image_url || '' }); setShowForm(true); }
     function openNew() { setEditing({ ...emptyProduct }); setShowForm(true); }
+
+    async function handleImageUpload(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        setUploading(true);
+        try {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+            const filePath = `${fileName}`;
+            const { error: uploadError } = await supabase.storage.from('products').upload(filePath, file);
+            if (uploadError) throw uploadError;
+            const { data } = supabase.storage.from('products').getPublicUrl(filePath);
+            setEditing({ ...editing, image_url: data.publicUrl });
+            toast.success('Imagem carregada com sucesso!');
+        } catch (error) {
+            console.error('Erro no upload', error);
+            toast.error('Erro ao fazer upload da imagem. O bucket "products" está criado/público?');
+        } finally {
+            setUploading(false);
+        }
+    }
 
     async function handleSave() {
         if (!editing.name) { toast.error('Nome é obrigatório'); return; }
         const slug = editing.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        const data = { ...editing, slug, price: parseFloat(editing.price) || 0, cost: parseFloat(editing.cost) || 0, stock: parseInt(editing.stock) || 0, min_stock: parseInt(editing.min_stock) || 5, promo_price: editing.promo_price ? parseFloat(editing.promo_price) : null };
+        const finalImages = editing.image_url ? [editing.image_url] : editing.images;
+        const data = { ...editing, slug, images: finalImages, price: parseFloat(editing.price) || 0, cost: parseFloat(editing.cost) || 0, stock: parseInt(editing.stock) || 0, min_stock: parseInt(editing.min_stock) || 5, promo_price: editing.promo_price ? parseFloat(editing.promo_price) : null };
         await db.put('products', data);
         await db.put('audit_log', { user_id: 'admin', action: editing.id ? 'product_updated' : 'product_created', entity_type: 'product', entity_id: data.id, details: `Produto: ${data.name}` });
         toast.success(editing.id ? 'Produto atualizado!' : 'Produto criado!');
@@ -57,6 +80,7 @@ export default function AdminProducts() {
                 <table className="table">
                     <thead>
                         <tr>
+                            <th style={{ width: 60 }}>Imagem</th>
                             <th>Produto</th>
                             <th>Categoria</th>
                             <th>Preço</th>
@@ -72,6 +96,13 @@ export default function AdminProducts() {
                             const cat = categories.find(c => c.id === p.category_id);
                             return (
                                 <tr key={p.id}>
+                                    <td>
+                                        {p.image_url ? (
+                                            <img src={p.image_url} alt={p.name} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 8 }} />
+                                        ) : (
+                                            <div style={{ width: 48, height: 48, background: 'var(--gray-800)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>📦</div>
+                                        )}
+                                    </td>
                                     <td>
                                         <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{p.name}</div>
                                         <div style={{ fontSize: '0.78rem', color: 'var(--gray-500)' }}>{p.brand} | {p.internal_code}</div>
@@ -114,6 +145,18 @@ export default function AdminProducts() {
                                 </div>
                                 <div className="form-group"><label className="form-label">Marca</label>
                                     <input type="text" className="form-input" value={editing.brand} onChange={e => setEditing({ ...editing, brand: e.target.value })} />
+                                </div>
+                            </div>
+                            <div className="form-row" style={{ alignItems: 'flex-end' }}>
+                                <div className="form-group"><label className="form-label">Imagem do Produto (URL ou Upload)</label>
+                                    <div style={{ display: 'flex', gap: 8 }}>
+                                        <input type="text" className="form-input" placeholder="https://..." value={editing.image_url || ''} onChange={e => setEditing({ ...editing, image_url: e.target.value })} style={{ flex: 1 }} />
+                                        <label className="btn btn-secondary" style={{ cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                            {uploading ? '⏳...' : '📷 Upload'}
+                                            <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleImageUpload} disabled={uploading} />
+                                        </label>
+                                    </div>
+                                    {editing.image_url && <img src={editing.image_url} alt="Preview" style={{ marginTop: 12, height: 100, borderRadius: 8, objectFit: 'cover' }} />}
                                 </div>
                             </div>
                             <div className="form-group"><label className="form-label">Descrição</label>
