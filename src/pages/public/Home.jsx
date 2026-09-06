@@ -85,9 +85,16 @@ export default function Home() {
                                     </Link>
                                 )}
                             </div>
-                            <div className="hero-visual">
-                                <div className="hero-phone-icon">📱</div>
-                            </div>
+                        </div>
+                        <div className="hero-visual">
+                            <video
+                                src="/video-hitcell.mp4"
+                                autoPlay
+                                loop
+                                muted
+                                playsInline
+                                className="hero-video-bg"
+                            />
                         </div>
                     </div>
                 ))}
