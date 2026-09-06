@@ -48,7 +48,15 @@ export default function Home() {
         setServices(srvContent?.items || []);
         setDifferentials(diffContent?.items || []);
         setTestimonials(tests);
-        setFaqs(faqItems.sort((a, b) => a.order - b.order));
+        const defaultFaqs = [
+            { id: 'f1', question: 'Qual o tempo médio de um reparo?', answer: 'Geralmente, nossos reparos padrão (como troca de tela ou bateria) são feitos no mesmo dia, levando entre 1 a 3 horas. Casos que exigem reparo avançado em placa podem levar de 2 a 5 dias úteis, pois dependem de diagnóstico profundo e testes.', order: 1 },
+            { id: 'f2', question: 'A assistência tem garantia?', answer: 'Sim! Todos os nossos serviços e produtos oferecem 90 dias de garantia contra defeitos de fabricação ou vícios do serviço prestado, respeitando estritamente o Código de Defesa do Consumidor. Aparelhos caídos, trincados ou expostos a água perdem a garantia.', order: 2 },
+            { id: 'f3', question: 'Vocês fazem orçamento sem compromisso?', answer: 'Com certeza. A taxa de avaliação em nosso balcão é totalmente gratuita na grande maioria dos casos. Você traz o aparelho, nossa equipe avalia e passa o valor exato, sem surpresas na hora de pagar.', order: 3 },
+            { id: 'f4', question: 'Onde vocês estão localizados?', answer: 'Nossa loja e laboratório ficam localizados na Rua Alcides Mourão, 350 - Aroeira, Macaé - RJ. É muito fácil estacionar na rua e nosso espaço é seguro e climatizado.', order: 4 },
+            { id: 'f5', question: 'Quais as formas de pagamento aceitas?', answer: 'Trabalhamos com Pix, dinheiro em espécie e todos os principais cartões de crédito e débito. Também oferecemos condições facilitadas de parcelamento para serviços de maior valor (consulte taxas no balcão).', order: 5 }
+        ];
+
+        setFaqs(faqItems?.length > 0 ? faqItems.sort((a, b) => a.order - b.order) : defaultFaqs);
         setSettings(sett || {});
     }
 
