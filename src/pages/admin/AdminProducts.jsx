@@ -70,14 +70,39 @@ export default function AdminProducts() {
 
     async function handleSave() {
         if (!editing.name) { toast.error('Nome é obrigatório'); return; }
-        const slug = editing.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-        const finalImages = editing.image_url ? [editing.image_url] : editing.images;
-        const data = { ...editing, slug, images: finalImages, price: parseFloat(editing.price) || 0, cost: parseFloat(editing.cost) || 0, stock: parseInt(editing.stock) || 0, min_stock: parseInt(editing.min_stock) || 5, promo_price: editing.promo_price ? parseFloat(editing.promo_price) : null };
-        await db.put('products', data);
-        await db.put('audit_log', { user_id: 'admin', action: editing.id ? 'product_updated' : 'product_created', entity_type: 'product', entity_id: data.id, details: `Produto: ${data.name}` });
-        toast.success(editing.id ? 'Produto atualizado!' : 'Produto criado!');
-        setShowForm(false);
-        loadAll();
+
+        try {
+            const slug = editing.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            const finalImages = editing.image_url ? [editing.image_url] : editing.images;
+
+            const data = {
+                ...editing,
+                slug,
+                images: finalImages,
+                category_id: editing.category_id || null,
+                price: parseFloat(editing.price) || 0,
+                cost: parseFloat(editing.cost) || 0,
+                stock: parseInt(editing.stock) || 0,
+                min_stock: parseInt(editing.min_stock) || 5,
+                promo_price: editing.promo_price ? parseFloat(editing.promo_price) : null
+            };
+
+            if (!data.id) delete data.id;
+
+            await db.put('products', data);
+
+            // Log de auditoria (nao falha o save se der erro)
+            try {
+                await db.put('audit_log', { user_id: 'admin', action: editing.id ? 'product_updated' : 'product_created', entity_type: 'product', entity_id: data.id || 'new', details: `Produto: ${data.name}` });
+            } catch (e) { }
+
+            toast.success(editing.id ? 'Produto atualizado!' : 'Produto criado!');
+            setShowForm(false);
+            loadAll();
+        } catch (error) {
+            console.error('Erro ao salvar produto:', error);
+            toast.error('Erro ao salvar. Verifique se escolheu uma categoria válida ou se a foto é muito grande.');
+        }
     }
 
     async function toggleActive(p) {
