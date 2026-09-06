@@ -88,10 +88,17 @@ export default function AdminProducts() {
             };
 
             if (!data.id) delete data.id;
+            delete data.image_url; // Remove helper form state
+
+            // Validate payload size for Base64 cases
+            const payloadString = JSON.stringify(data);
+            if (payloadString.length > 3000000) { // ~3MB
+                toast.error('A imagem escolhida é muito pesada para o banco. Escolha outra foto menor.');
+                return;
+            }
 
             await db.put('products', data);
 
-            // Log de auditoria (nao falha o save se der erro)
             try {
                 await db.put('audit_log', { user_id: 'admin', action: editing.id ? 'product_updated' : 'product_created', entity_type: 'product', entity_id: data.id || 'new', details: `Produto: ${data.name}` });
             } catch (e) { }
@@ -101,7 +108,8 @@ export default function AdminProducts() {
             loadAll();
         } catch (error) {
             console.error('Erro ao salvar produto:', error);
-            toast.error('Erro ao salvar. Verifique se escolheu uma categoria válida ou se a foto é muito grande.');
+            const msg = error.message || error.details || JSON.stringify(error);
+            toast.error(`Falha no Banco: ${msg}`);
         }
     }
 
