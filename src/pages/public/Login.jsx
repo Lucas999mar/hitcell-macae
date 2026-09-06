@@ -52,11 +52,6 @@ export default function Login() {
                 </p>
             </div>
 
-            <div style={{ textAlign: 'center', marginTop: 30, padding: 20, background: 'var(--black-card)', borderRadius: 'var(--radius-md)', border: '1px solid var(--gray-800)' }}>
-                <p style={{ fontSize: '0.82rem', color: 'var(--gray-500)' }}>
-                    Acesso Admin: admin@hitcell.com / admin123
-                </p>
-            </div>
         </div>
     );
 }
