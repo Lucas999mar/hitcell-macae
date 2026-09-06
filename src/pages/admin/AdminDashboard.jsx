@@ -1,163 +1,207 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
 import db from '../../database/db';
 
 export default function AdminDashboard() {
     const [stats, setStats] = useState({});
     const [loading, setLoading] = useState(true);
+    const [period, setPeriod] = useState('month'); // today, week, month, quarter, year
 
-    useEffect(() => { loadStats(); }, []);
+    useEffect(() => { loadStats(); }, [period]);
 
     async function loadStats() {
-        const [orders, products, customers, payments, serviceOrders, serviceRequests, revenues, expenses] = await Promise.all([
-            db.getAll('orders'), db.getAll('products'), db.getAll('customers'),
-            db.getAll('payments'), db.getAll('service_orders'), db.getAll('service_requests'),
-            db.getAll('revenues'), db.getAll('expenses')
+        setLoading(true);
+        const [orders, products, customers, serviceOrders] = await Promise.all([
+            db.getAll('orders'), db.getAll('products'), db.getAll('customers'), db.getAll('service_orders')
         ]);
 
-        const today = new Date().toDateString();
-        const thisMonth = new Date().getMonth();
-        const thisYear = new Date().getFullYear();
+        const now = new Date();
+        const startDate = new Date();
+        if (period === 'today') startDate.setHours(0, 0, 0, 0);
+        else if (period === 'week') startDate.setDate(now.getDate() - 7);
+        else if (period === 'month') startDate.setMonth(now.getMonth() - 1);
+        else if (period === 'quarter') startDate.setMonth(now.getMonth() - 3);
+        else if (period === 'year') startDate.setFullYear(now.getFullYear() - 1);
 
-        const todayOrders = orders.filter(o => new Date(o.created_at).toDateString() === today);
-        const monthOrders = orders.filter(o => { const d = new Date(o.created_at); return d.getMonth() === thisMonth && d.getFullYear() === thisYear; });
-        const paidOrders = orders.filter(o => o.payment_status === 'approved' || o.status === 'paid' || o.status === 'delivered' || o.status === 'ready_pickup');
-        const pendingOrders = orders.filter(o => o.status === 'pending_payment');
-        const lowStockProducts = products.filter(p => p.active && p.stock <= (p.min_stock || 5));
-        const totalRevenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
-        const monthRevenue = monthOrders.reduce((sum, o) => sum + (o.total || 0), 0);
-        const todayRevenue = todayOrders.reduce((sum, o) => sum + (o.total || 0), 0);
-        const totalCost = products.reduce((sum, p) => sum + ((p.cost || 0) * (p.stock || 0)), 0);
-        const stockValue = products.reduce((sum, p) => sum + ((p.price || 0) * (p.stock || 0)), 0);
+        const filteredOrders = orders.filter(o => new Date(o.created_at) >= startDate);
+        const paidOrders = filteredOrders.filter(o => ['approved', 'paid', 'delivered', 'ready_pickup'].includes(o.status || o.payment_status));
+
+        const totalRevenue = paidOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+        const totalOrders = paidOrders.length;
+        const ticketMedio = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+        // Approximate cost from products sold (mock calculation based on items if available, or 40% margin default)
+        // Since order items aren't heavily detailed here, we estimate standard 50% markup for margins if exact cost isn't mapped
+        const estimatedMargin = totalRevenue * 0.45;
+        const estimatedCosts = totalRevenue - estimatedMargin;
+
+        const stockValue = products.reduce((sum, p) => sum + ((Number(p.price) || 0) * (Number(p.stock) || 0)), 0);
+        const stockCost = products.reduce((sum, p) => sum + ((Number(p.cost) || 0) * (Number(p.stock) || 0)), 0);
+        const lowStock = products.filter(p => p.stock <= (p.min_stock || 5));
+
         const activeServices = serviceOrders.filter(o => !['delivered', 'cancelled'].includes(o.status));
-        const waitingApproval = serviceOrders.filter(o => o.status === 'waiting_approval');
+
+        // Generate Chart Data (Daily Revenue)
+        const dailyDataMap = {};
+        filteredOrders.forEach(o => {
+            const dateStr = new Date(o.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+            if (!dailyDataMap[dateStr]) dailyDataMap[dateStr] = { name: dateStr, revenue: 0, orders: 0 };
+            if (['approved', 'paid', 'delivered', 'ready_pickup'].includes(o.status || o.payment_status)) {
+                dailyDataMap[dateStr].revenue += Number(o.total) || 0;
+                dailyDataMap[dateStr].orders += 1;
+            }
+        });
+        const chartData = Object.values(dailyDataMap).sort((a, b) => {
+            const [d1, m1] = a.name.split('/');
+            const [d2, m2] = b.name.split('/');
+            return new Date(2020, m1 - 1, d1) - new Date(2020, m2 - 1, d2);
+        });
+
+        // Generate Category Data (Mock based on top products)
         const topProducts = [...products].sort((a, b) => (b.sales_count || 0) - (a.sales_count || 0)).slice(0, 5);
-        const recentOrders = [...orders].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)).slice(0, 5);
 
         setStats({
-            todayOrders: todayOrders.length, todayRevenue,
-            monthOrders: monthOrders.length, monthRevenue,
-            totalRevenue, totalOrders: orders.length,
-            paidOrders: paidOrders.length, pendingOrders: pendingOrders.length,
-            totalProducts: products.length, lowStock: lowStockProducts.length,
-            stockValue, totalCost,
-            totalCustomers: customers.length,
-            activeServices: activeServices.length, waitingApproval: waitingApproval.length,
-            newRequests: serviceRequests.length,
-            grossProfit: monthRevenue * 0.6,
-            topProducts, recentOrders, lowStockProducts
+            totalRevenue, ticketMedio, totalOrders, estimatedMargin, estimatedCosts,
+            stockValue, stockCost, lowStock: lowStock.length, totalProducts: products.length,
+            activeServices: activeServices.length, customers: customers.length,
+            chartData, topProducts
         });
         setLoading(false);
     }
 
-    if (loading) return <div className="page-loader"><div className="loader"></div></div>;
-
-    const statCards = [
-        { icon: '🛒', label: 'Vendas Hoje', value: stats.todayOrders, color: 'var(--red)', link: '/admin/pedidos' },
-        { icon: '📈', label: 'Venda do Mês', value: stats.monthOrders, color: 'var(--blue)', link: '/admin/pedidos' },
-        { icon: '💰', label: 'Faturamento Hoje', value: `R$ ${stats.todayRevenue?.toFixed(2)}`, color: 'var(--green)', link: '/admin/financeiro' },
-        { icon: '💵', label: 'Faturamento Mês', value: `R$ ${stats.monthRevenue?.toFixed(2)}`, color: 'var(--green)', link: '/admin/financeiro' },
-        { icon: '⏳', label: 'Pedidos Pendentes', value: stats.pendingOrders, color: 'var(--yellow)', link: '/admin/pedidos' },
-        { icon: '✅', label: 'Pedidos Pagos', value: stats.paidOrders, color: 'var(--green)', link: '/admin/pedidos' },
-        { icon: '🔧', label: 'Serviços Ativos', value: stats.activeServices, color: 'var(--blue)', link: '/admin/assistencia' },
-        { icon: '📋', label: 'Orçam. Pendentes', value: stats.waitingApproval, color: 'var(--orange)', link: '/admin/assistencia' },
-        { icon: '⚠️', label: 'Estoque Baixo', value: stats.lowStock, color: 'var(--red)', link: '/admin/estoque' },
-        { icon: '📦', label: 'Total Produtos', value: stats.totalProducts, color: 'var(--gray-400)', link: '/admin/produtos' },
-        { icon: '👥', label: 'Clientes', value: stats.totalCustomers, color: 'var(--blue)', link: '/admin/clientes' },
-        { icon: '📊', label: 'Valor Estoque', value: `R$ ${stats.stockValue?.toFixed(2)}`, color: 'var(--metallic-text)', link: '/admin/estoque' },
-    ];
+    const COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#a855f7'];
 
     return (
-        <div className="animate-fade">
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: 24 }}>📊 Visão Geral</h1>
-
-            {/* Stats Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginBottom: 30 }}>
-                {statCards.map((card, i) => (
-                    <Link to={card.link} key={i} className="stat-card" style={{ textDecoration: 'none', color: 'inherit' }}>
-                        <div className="stat-icon" style={{ background: `${card.color}20`, color: card.color }}>{card.icon}</div>
-                        <div className="stat-value" style={{ color: card.color }}>{card.value}</div>
-                        <div className="stat-label">{card.label}</div>
-                    </Link>
-                ))}
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }} className="dashboard-grid">
-                {/* Recent Orders */}
-                <div className="card">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                        <h3 style={{ fontWeight: 700 }}>Pedidos Recentes</h3>
-                        <Link to="/admin/pedidos" className="btn btn-ghost btn-sm">Ver Todos →</Link>
-                    </div>
-                    {stats.recentOrders?.length === 0 ? (
-                        <p style={{ color: 'var(--gray-500)', textAlign: 'center', padding: 20 }}>Nenhum pedido ainda</p>
-                    ) : (
-                        stats.recentOrders?.map(o => (
-                            <div key={o.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--gray-800)', fontSize: '0.88rem' }}>
-                                <div>
-                                    <span style={{ fontWeight: 600, color: 'var(--red)' }}>{o.number}</span>
-                                    <span style={{ color: 'var(--gray-500)', marginLeft: 8 }}>{o.customer_name}</span>
-                                </div>
-                                <div style={{ textAlign: 'right' }}>
-                                    <span style={{ fontWeight: 600 }}>R$ {o.total?.toFixed(2)}</span>
-                                    <span className={`badge badge-${o.status === 'pending_payment' ? 'yellow' : 'green'}`} style={{ marginLeft: 8 }}>
-                                        {o.status === 'pending_payment' ? 'Pendente' : o.status === 'paid' ? 'Pago' : o.status}
-                                    </span>
-                                </div>
-                            </div>
-                        ))
-                    )}
+        <div className="animate-fade pb-8">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+                <div>
+                    <h1 style={{ fontSize: '1.8rem', fontWeight: 800 }}>📊 Dashboard BI</h1>
+                    <p style={{ color: 'var(--gray-400)', fontSize: '0.9rem' }}>Visão geral de receitas, margens e métricas</p>
                 </div>
 
-                {/* Top Products */}
-                <div className="card">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                        <h3 style={{ fontWeight: 700 }}>Mais Vendidos</h3>
-                        <Link to="/admin/produtos" className="btn btn-ghost btn-sm">Ver Todos →</Link>
-                    </div>
-                    {stats.topProducts?.map((p, i) => (
-                        <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--gray-800)', fontSize: '0.88rem' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <span style={{ width: 24, height: 24, borderRadius: '50%', background: 'var(--gray-800)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700 }}>{i + 1}</span>
-                                <span>{p.name}</span>
-                            </div>
-                            <span style={{ color: 'var(--gray-400)' }}>{p.sales_count || 0} vendas</span>
+                <div className="tabs" style={{ background: 'var(--black-card)', padding: 4, borderRadius: 'var(--radius-lg)' }}>
+                    <button className={`tab ${period === 'today' ? 'active' : ''}`} onClick={() => setPeriod('today')}>Hoje</button>
+                    <button className={`tab ${period === 'week' ? 'active' : ''}`} onClick={() => setPeriod('week')}>7 Dias</button>
+                    <button className={`tab ${period === 'month' ? 'active' : ''}`} onClick={() => setPeriod('month')}>30 Dias</button>
+                    <button className={`tab ${period === 'quarter' ? 'active' : ''}`} onClick={() => setPeriod('quarter')}>Trimestre</button>
+                    <button className={`tab ${period === 'year' ? 'active' : ''}`} onClick={() => setPeriod('year')}>Anual</button>
+                </div>
+            </div>
+
+            {loading ? (
+                <div className="page-loader" style={{ height: 400 }}><div className="loader"></div></div>
+            ) : (
+                <>
+                    {/* Primary KPIs */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
+                        <div className="stat-card" style={{ background: 'linear-gradient(135deg, rgba(220,38,38,0.1), rgba(0,0,0,0))', border: '1px solid rgba(220,38,38,0.2)' }}>
+                            <div className="stat-label">Receita Bruta</div>
+                            <div className="stat-value" style={{ color: 'var(--white)', fontSize: '1.8rem' }}>R$ {stats.totalRevenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--green)', marginTop: 8 }}>Vendas concluídas</div>
                         </div>
-                    ))}
-                </div>
+                        <div className="stat-card" style={{ background: 'linear-gradient(135deg, rgba(34,197,94,0.1), rgba(0,0,0,0))', border: '1px solid rgba(34,197,94,0.2)' }}>
+                            <div className="stat-label">Lucro / Margem (Est.)</div>
+                            <div className="stat-value" style={{ color: 'var(--green)', fontSize: '1.8rem' }}>R$ {stats.estimatedMargin.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--gray-400)', marginTop: 8 }}>Baseado em margem padrão</div>
+                        </div>
+                        <div className="stat-card" style={{ background: 'linear-gradient(135deg, rgba(59,130,246,0.1), rgba(0,0,0,0))', border: '1px solid rgba(59,130,246,0.2)' }}>
+                            <div className="stat-label">Ticket Médio</div>
+                            <div className="stat-value" style={{ color: 'var(--white)', fontSize: '1.8rem' }}>R$ {stats.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--gray-400)', marginTop: 8 }}>{stats.totalOrders} pedidos pagos</div>
+                        </div>
+                        <div className="stat-card" style={{ background: 'linear-gradient(135deg, rgba(234,179,8,0.1), rgba(0,0,0,0))', border: '1px solid rgba(234,179,8,0.2)' }}>
+                            <div className="stat-label">Valor do Estoque</div>
+                            <div className="stat-value" style={{ color: 'var(--white)', fontSize: '1.8rem' }}>R$ {stats.stockValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--gray-400)', marginTop: 8 }}>Custo: R$ {stats.stockCost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                        </div>
+                    </div>
 
-                {/* Low Stock Alert */}
-                {stats.lowStockProducts?.length > 0 && (
-                    <div className="card" style={{ borderLeft: '3px solid var(--red)' }}>
-                        <h3 style={{ fontWeight: 700, marginBottom: 16 }}>⚠️ Estoque Baixo</h3>
-                        {stats.lowStockProducts.map(p => (
-                            <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--gray-800)', fontSize: '0.88rem' }}>
-                                <span>{p.name}</span>
-                                <span style={{ color: 'var(--red)', fontWeight: 700 }}>{p.stock} un.</span>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 24, marginBottom: 24 }} className="dashboard-grid">
+                        {/* Revenue Chart */}
+                        <div className="card">
+                            <h3 style={{ fontWeight: 700, marginBottom: 20 }}>Receita por Período (R$)</h3>
+                            <div style={{ height: 300, width: '100%' }}>
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={stats.chartData}>
+                                        <defs>
+                                            <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="var(--red)" stopOpacity={0.4} />
+                                                <stop offset="95%" stopColor="var(--red)" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                                        <XAxis dataKey="name" stroke="var(--gray-500)" fontSize={12} tickMargin={10} />
+                                        <YAxis stroke="var(--gray-500)" fontSize={12} tickFormatter={v => `R$${v}`} />
+                                        <Tooltip
+                                            contentStyle={{ background: 'var(--black-card)', border: '1px solid var(--gray-700)', borderRadius: 8 }}
+                                            labelStyle={{ color: 'var(--gray-300)', marginBottom: 4 }}
+                                            itemStyle={{ color: 'var(--red)', fontWeight: 700 }}
+                                            formatter={(value) => [`R$ ${Number(value).toFixed(2)}`, 'Receita']}
+                                        />
+                                        <Area type="monotone" dataKey="revenue" stroke="var(--red)" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
                             </div>
-                        ))}
-                    </div>
-                )}
+                        </div>
 
-                {/* Quick Actions */}
-                <div className="card">
-                    <h3 style={{ fontWeight: 700, marginBottom: 16 }}>⚡ Ações Rápidas</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                        <Link to="/admin/pos" className="btn btn-primary btn-sm">💰 Nova Venda</Link>
-                        <Link to="/admin/produtos" className="btn btn-secondary btn-sm">📦 Novo Produto</Link>
-                        <Link to="/admin/assistencia" className="btn btn-secondary btn-sm">🔧 Nova O.S.</Link>
-                        <Link to="/admin/estoque" className="btn btn-secondary btn-sm">📊 Estoque</Link>
-                        <Link to="/admin/financeiro" className="btn btn-secondary btn-sm">💵 Financeiro</Link>
-                        <Link to="/admin/clientes" className="btn btn-secondary btn-sm">👥 Clientes</Link>
+                        {/* Top Products */}
+                        <div className="card">
+                            <h3 style={{ fontWeight: 700, marginBottom: 20 }}>Produtos Mais Vendidos</h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                                {stats.topProducts.map((p, i) => (
+                                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                            <div style={{ width: 32, height: 32, borderRadius: 8, background: COLORS[i % COLORS.length] + '20', color: COLORS[i % COLORS.length], display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                                                {i + 1}
+                                            </div>
+                                            <div>
+                                                <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{p.name.length > 22 ? p.name.substring(0, 22) + '...' : p.name}</div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--gray-400)' }}>R$ {p.price.toFixed(2)}</div>
+                                            </div>
+                                        </div>
+                                        <div style={{ fontWeight: 700 }}>{p.sales_count || 0} un</div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
 
-            <style>{`
-        @media (max-width: 768px) {
-          .dashboard-grid { grid-template-columns: 1fr !important; }
-        }
-      `}</style>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }} className="dashboard-grid">
+                        <div className="card">
+                            <h3 style={{ fontWeight: 700, marginBottom: 16 }}>Status Operacional</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                <div style={{ background: 'var(--black-soft)', padding: 16, borderRadius: 'var(--radius-lg)' }}>
+                                    <div style={{ color: 'var(--gray-400)', fontSize: '0.85rem' }}>Serviços Ativos</div>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: 700, marginTop: 4 }}>{stats.activeServices}</div>
+                                </div>
+                                <div style={{ background: 'var(--black-soft)', padding: 16, borderRadius: 'var(--radius-lg)' }}>
+                                    <div style={{ color: 'var(--gray-400)', fontSize: '0.85rem' }}>Estoque Baixo</div>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--red)', marginTop: 4 }}>{stats.lowStock}</div>
+                                </div>
+                                <div style={{ background: 'var(--black-soft)', padding: 16, borderRadius: 'var(--radius-lg)' }}>
+                                    <div style={{ color: 'var(--gray-400)', fontSize: '0.85rem' }}>Total Produtos</div>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: 700, marginTop: 4 }}>{stats.totalProducts}</div>
+                                </div>
+                                <div style={{ background: 'var(--black-soft)', padding: 16, borderRadius: 'var(--radius-lg)' }}>
+                                    <div style={{ color: 'var(--gray-400)', fontSize: '0.85rem' }}>Clientes Regis.</div>
+                                    <div style={{ fontSize: '1.5rem', fontWeight: 700, marginTop: 4 }}>{stats.customers}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="card">
+                            <h3 style={{ fontWeight: 700, marginBottom: 16 }}>Atalhos do Sistema</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                                <Link to="/admin/pos" className="btn btn-primary" style={{ height: 'auto', padding: '16px 0' }}>💰 Nova Venda</Link>
+                                <Link to="/admin/assistencia" className="btn btn-secondary" style={{ height: 'auto', padding: '16px 0' }}>🔧 Ordem Serviço</Link>
+                                <Link to="/admin/pedidos" className="btn btn-secondary" style={{ height: 'auto', padding: '16px 0' }}>📦 Pedidos</Link>
+                                <Link to="/admin/estoque" className="btn btn-secondary" style={{ height: 'auto', padding: '16px 0' }}>📊 Estoque</Link>
+                            </div>
+                        </div>
+                    </div>
+                </>
+            )}
         </div>
     );
 }
