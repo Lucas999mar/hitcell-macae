@@ -17,10 +17,12 @@ export default function ServiceRequest() {
         if (!form.privacy) { toast.error('Aceite a política de privacidade'); return; }
         setLoading(true);
         try {
-            await db.put('service_requests', {
-                ...form, status: 'received',
-                history: [{ action: 'Solicitação recebida pelo site', date: new Date().toISOString() }]
-            });
+            const payload = { ...form, status: 'received' };
+            delete payload.privacy; // Remove visual control to avoid DB schema conflict
+
+            payload.history = [{ action: 'Solicitação recebida pelo site', date: new Date().toISOString() }];
+
+            await db.put('service_requests', payload);
             toast.success('Solicitação enviada com sucesso!');
             setSubmitted(true);
         } catch (err) { toast.error(err.message); }
