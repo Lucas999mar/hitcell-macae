@@ -17,7 +17,7 @@ export default function ServiceRequest() {
         if (!form.privacy) { toast.error('Aceite a política de privacidade'); return; }
         setLoading(true);
         try {
-            const payload = { ...form, status: 'received' };
+            const payload = { ...form, status: 'pending' };
             delete payload.privacy; // Remove visual control to avoid DB schema conflict
 
             payload.history = [{ action: 'Solicitação recebida pelo site', date: new Date().toISOString() }];
