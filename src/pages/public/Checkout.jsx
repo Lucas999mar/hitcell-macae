@@ -27,9 +27,11 @@ export default function Checkout() {
             // Provide sensible fallback regions if not configured in the admin dashboard yet
             if (!sett.delivery_regions || sett.delivery_regions.length === 0) {
                 sett.delivery_regions = [
-                    { name: 'Macaé (Centro, Aroeira, Cajueiros - Proximidades)', price: 0, days: 1 },
-                    { name: 'Macaé (Cavaleiros, Pecado, Região dos Lagos)', price: 10, days: 1 },
-                    { name: 'Macaé (Região Serrana / Afastados)', price: 25, days: 2 }
+                    { name: 'Macaé', price: 10, days: 1 },
+                    { name: 'Rio das Ostras', price: 20, days: 1 },
+                    { name: 'Carapebus', price: 25, days: 2 },
+                    { name: 'Conceição de Macabu', price: 30, days: 2 },
+                    { name: 'Casimiro de Abreu', price: 35, days: 2 }
                 ];
             }
             setSettings(sett);
@@ -46,14 +48,24 @@ export default function Checkout() {
                 const res = await fetch(`https://viacep.com.br/ws/${rawCep}/json/`);
                 const data = await res.json();
                 if (!data.erro) {
+                    const fetchedCity = data.localidade;
+                    let autoRegion = form.delivery_region;
+
+                    // Search if fetchedCity exists in our delivery regions
+                    if (settings.delivery_regions) {
+                        const matched = settings.delivery_regions.find(r => r.name.toLowerCase() === fetchedCity.toLowerCase());
+                        if (matched) autoRegion = matched.name;
+                    }
+
                     setForm(f => ({
                         ...f,
                         address: data.logradouro || f.address,
                         neighborhood: data.bairro || f.neighborhood,
-                        city: data.localidade || f.city,
-                        state: data.uf || f.state
+                        city: fetchedCity || f.city,
+                        state: data.uf || f.state,
+                        delivery_region: autoRegion
                     }));
-                    toast.success('Endereço auto-preenchido pelo CEP!');
+                    toast.success('Endereço e Cidade auto-preenchidos!');
                 }
             } catch (err) {
                 console.error('Erro na consulta do CEP:', err);
@@ -192,28 +204,39 @@ export default function Checkout() {
                             )}
                             {form.delivery_type === 'delivery' && (
                                 <>
-                                    <div className="form-group">
-                                        <label className="form-label">Região</label>
-                                        <select className="form-select" value={form.delivery_region} onChange={e => updateForm('delivery_region', e.target.value)}>
-                                            <option value="">Selecione...</option>
-                                            {settings.delivery_regions?.map(r => (
-                                                <option key={r.name} value={r.name}>{r.name} – {r.price === 0 ? 'Grátis' : `R$ ${r.price.toFixed(2)}`} ({r.days} dia{r.days !== 1 ? 's' : ''})</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Endereço *</label>
-                                        <input type="text" className="form-input" placeholder="Rua, número" value={form.address} onChange={e => updateForm('address', e.target.value)} />
-                                    </div>
                                     <div className="form-row">
+                                        <div className="form-group">
+                                            <label className="form-label">CEP (Auto-completa tudo)</label>
+                                            <input type="text" className="form-input" placeholder="00000-000" value={form.zip} onChange={e => updateForm('zip', e.target.value)} onBlur={handleCepBlur} />
+                                        </div>
                                         <div className="form-group">
                                             <label className="form-label">Bairro *</label>
                                             <input type="text" className="form-input" value={form.neighborhood} onChange={e => updateForm('neighborhood', e.target.value)} />
                                         </div>
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Endereço Completo (Rua e Nº) *</label>
+                                        <input type="text" className="form-input" placeholder="Rua das Flores, 123" value={form.address} onChange={e => updateForm('address', e.target.value)} />
+                                    </div>
+                                    <div className="form-row">
                                         <div className="form-group">
-                                            <label className="form-label">CEP (Auto-completa o endereço)</label>
-                                            <input type="text" className="form-input" placeholder="Apenas Números" value={form.zip} onChange={e => updateForm('zip', e.target.value)} onBlur={handleCepBlur} />
+                                            <label className="form-label">Cidade *</label>
+                                            <input type="text" className="form-input" value={form.city} onChange={e => updateForm('city', e.target.value)} />
                                         </div>
+                                        <div className="form-group">
+                                            <label className="form-label">Estado *</label>
+                                            <input type="text" className="form-input" value={form.state} onChange={e => updateForm('state', e.target.value)} />
+                                        </div>
+                                    </div>
+                                    <div className="form-group" style={{ marginTop: 16 }}>
+                                        <label className="form-label">Cidade de Entrega (Afeta o Frete)</label>
+                                        <select className="form-select" value={form.delivery_region} onChange={e => updateForm('delivery_region', e.target.value)}>
+                                            <option value="">Selecione a cidade atendida...</option>
+                                            {settings.delivery_regions?.map(r => (
+                                                <option key={r.name} value={r.name}>{r.name} – {r.price === 0 ? 'Grátis' : `R$ ${r.price.toFixed(2)}`} ({r.days} dia{r.days !== 1 ? 's' : ''})</option>
+                                            ))}
+                                        </select>
+                                        <span style={{ fontSize: '0.82rem', color: 'var(--gray-400)', display: 'block', marginTop: 4 }}>Se a sua cidade não estiver na lista, entre em contato.</span>
                                     </div>
                                 </>
                             )}
