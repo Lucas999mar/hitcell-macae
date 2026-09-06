@@ -20,7 +20,10 @@ export default function Footer() {
                         </p>
                         <div className="footer-social">
                             <a href="https://wa.me/5522999737366" target="_blank" rel="noopener noreferrer" className="footer-social-link whatsapp">💬 WhatsApp</a>
-                            <a href="https://instagram.com/hitcellmacae" target="_blank" rel="noopener noreferrer" className="footer-social-link instagram">📷 Instagram</a>
+                            <a href="https://www.instagram.com/hitcellmacae_?stkn=cDJ1Z3EwcnQ2cjFq" target="_blank" rel="noopener noreferrer" className="footer-social-link instagram" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                                Instagram
+                            </a>
                         </div>
                     </div>
 
