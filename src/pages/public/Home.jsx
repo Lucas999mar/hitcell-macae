@@ -283,17 +283,17 @@ export default function Home() {
                         <div className="location-info">
                             <h2 className="section-title">Nossa Loja</h2>
                             <p className="location-address">
-                                📍 {settings.address}<br />
-                                {settings.neighborhood}, {settings.city} – {settings.state}
+                                📍 {settings.address || 'Rua Alcides Mourão, 350'}<br />
+                                {settings.neighborhood || 'Aroeira'}, {settings.city || 'Macaé'} – {settings.state || 'RJ'}
                             </p>
                             <p className="location-hours">
-                                🕐 {settings.hours}
+                                🕐 {settings.hours || 'Seg a Sex: 9h às 18h / Sáb: 9h às 13h'}
                             </p>
                             <p className="location-phone">
-                                📱 {settings.whatsapp_display}
+                                📱 {settings.whatsapp_display || '(22) 99973-7366'}
                             </p>
                             <a
-                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(settings.address + ', ' + settings.city + ' ' + settings.state)}`}
+                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((settings.address || 'Rua Alcides Mourão, 350') + ', ' + (settings.city || 'Macaé') + ' ' + (settings.state || 'RJ'))}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="btn btn-primary"
