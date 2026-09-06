@@ -7,10 +7,13 @@ export default function Footer() {
             <div className="container">
                 <div className="footer-grid">
                     <div className="footer-brand">
-                        <div className="footer-logo">
-                            <span className="logo-hit">Hit</span><span className="logo-cell">Cell</span>
-                            <span className="footer-logo-sub">Macaé</span>
-                        </div>
+                        <Link to="/" className="footer-logo" style={{ textDecoration: 'none' }}>
+                            <img src="/images/logo-round.png" alt="HitCell Macaé" style={{ height: 48, objectFit: 'contain', marginBottom: 8 }} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
+                            <div style={{ display: 'none', flexDirection: 'column' }}>
+                                <div><span className="logo-hit">Hit</span><span className="logo-cell">Cell</span></div>
+                                <span className="footer-logo-sub">Macaé</span>
+                            </div>
+                        </Link>
                         <p className="footer-desc">
                             Assistência técnica especializada e acessórios para celulares em Macaé.
                             Qualidade, confiança e preço justo.

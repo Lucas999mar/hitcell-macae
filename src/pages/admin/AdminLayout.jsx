@@ -42,8 +42,9 @@ export default function AdminLayout() {
             {/* Sidebar */}
             <aside className={`admin-sidebar ${sidebarOpen ? '' : 'collapsed'} ${mobileSidebar ? 'mobile-open' : ''}`}>
                 <div className="admin-sidebar-header">
-                    <Link to="/" className="admin-sidebar-logo">
-                        <span className="logo-hit">Hit</span><span className="logo-cell">Cell</span>
+                    <Link to="/" className="admin-sidebar-logo" style={{ textDecoration: 'none' }}>
+                        <img src="/images/logo-round.png" alt="HitCell Macaé" style={{ height: 36, objectFit: 'contain' }} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }} />
+                        <div style={{ display: 'none' }}><span className="logo-hit">Hit</span><span className="logo-cell">Cell</span></div>
                     </Link>
                     <button className="btn btn-ghost btn-icon-sm hide-mobile" onClick={() => setSidebarOpen(!sidebarOpen)}>
                         {sidebarOpen ? '◀' : '▶'}
