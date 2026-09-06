@@ -10,14 +10,18 @@ export default function Account() {
     const [services, setServices] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    useEffect(() => {
+        if (!authLoading && user) {
+            loadData();
+        }
+    }, [user, authLoading]);
+
     if (authLoading) return <div className="page-loader"><div className="loader"></div></div>;
 
     if (!authLoading && !user) {
         if (typeof window !== 'undefined') window.location.href = '/login';
         return null;
     }
-
-    useEffect(() => { loadData(); }, [user]);
 
     async function loadData() {
         const [o, s] = await Promise.all([
