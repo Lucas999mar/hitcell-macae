@@ -27,19 +27,42 @@ export default function AdminProducts() {
     async function handleImageUpload(e) {
         const file = e.target.files[0];
         if (!file) return;
+
+        // Verifica tamanho básico (evitar base64 gigas se der fallback)
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('A imagem é muito grande (Máximo 5MB).');
+            return;
+        }
+
         setUploading(true);
         try {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
-            const filePath = `${fileName}`;
-            const { error: uploadError } = await supabase.storage.from('products').upload(filePath, file);
-            if (uploadError) throw uploadError;
-            const { data } = supabase.storage.from('products').getPublicUrl(filePath);
-            setEditing({ ...editing, image_url: data.publicUrl });
+            let finalUrl = '';
+
+            try {
+                // Tenta Supabase Storage Oficial
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
+                const { error: uploadError } = await supabase.storage.from('products').upload(fileName, file);
+
+                if (uploadError) throw uploadError;
+
+                const { data } = supabase.storage.from('products').getPublicUrl(fileName);
+                finalUrl = data.publicUrl;
+            } catch (storageError) {
+                console.warn('Storage falhou. Iniciando fallback de segurança (Base64)...', storageError);
+                // Fallback Seguro (Base64) - salva a imagem no próprio banco caso o bucket não exista
+                finalUrl = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            setEditing(prev => ({ ...prev, image_url: finalUrl }));
             toast.success('Imagem carregada com sucesso!');
         } catch (error) {
-            console.error('Erro no upload', error);
-            toast.error('Erro ao fazer upload da imagem. O bucket "products" está criado/público?');
+            console.error('Erro geral no upload', error);
+            toast.error('Ocorreu um erro crítico ao processar a imagem.');
         } finally {
             setUploading(false);
         }
