@@ -67,7 +67,12 @@ export default function Home() {
                                 <h1 className="hero-title">{banner.title}</h1>
                                 <p className="hero-subtitle">{banner.subtitle}</p>
                                 {banner.cta_text && (
-                                    <Link to={banner.cta_link || '/loja'} className="btn btn-primary btn-lg">
+                                    <Link to={banner.cta_link ? banner.cta_link : (
+                                        banner.cta_text.toLowerCase().includes('atendimento') ||
+                                            banner.cta_text.toLowerCase().includes('assist') ? '/assistencia' :
+                                            banner.cta_text.toLowerCase().includes('contato') ? '/contato' :
+                                                '/loja'
+                                    )} className="btn btn-primary btn-lg">
                                         {banner.cta_text} →
                                     </Link>
                                 )}
