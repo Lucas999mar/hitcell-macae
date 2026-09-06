@@ -6,9 +6,11 @@ import db from '../../database/db';
 export default function AdminDashboard() {
     const [stats, setStats] = useState({});
     const [loading, setLoading] = useState(true);
-    const [period, setPeriod] = useState('month'); // today, week, month, quarter, year
+    const [period, setPeriod] = useState('month'); // today, week, month, quarter, year, custom
+    const [dateStart, setDateStart] = useState('');
+    const [dateEnd, setDateEnd] = useState('');
 
-    useEffect(() => { loadStats(); }, [period]);
+    useEffect(() => { loadStats(); }, [period, dateStart, dateEnd]);
 
     async function loadStats() {
         setLoading(true);
@@ -17,14 +19,25 @@ export default function AdminDashboard() {
         ]);
 
         const now = new Date();
-        const startDate = new Date();
+        let startDate = new Date();
+        let endDate = new Date();
+
         if (period === 'today') startDate.setHours(0, 0, 0, 0);
         else if (period === 'week') startDate.setDate(now.getDate() - 7);
         else if (period === 'month') startDate.setMonth(now.getMonth() - 1);
         else if (period === 'quarter') startDate.setMonth(now.getMonth() - 3);
         else if (period === 'year') startDate.setFullYear(now.getFullYear() - 1);
+        else if (period === 'custom') {
+            if (dateStart) startDate = new Date(dateStart + 'T00:00:00');
+            else startDate = new Date(2000, 0, 1);
+            if (dateEnd) endDate = new Date(dateEnd + 'T23:59:59');
+        }
 
-        const filteredOrders = orders.filter(o => new Date(o.created_at) >= startDate);
+        const filteredOrders = orders.filter(o => {
+            const d = new Date(o.created_at);
+            if (period === 'custom') return d >= startDate && d <= endDate;
+            return d >= startDate;
+        });
         const paidOrders = filteredOrders.filter(o => ['approved', 'paid', 'delivered', 'ready_pickup'].includes(o.status || o.payment_status));
 
         const totalRevenue = paidOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
@@ -80,12 +93,19 @@ export default function AdminDashboard() {
                     <p style={{ color: 'var(--gray-400)', fontSize: '0.9rem' }}>Visão geral de receitas, margens e métricas</p>
                 </div>
 
-                <div className="tabs" style={{ background: 'var(--black-card)', padding: 4, borderRadius: 'var(--radius-lg)' }}>
-                    <button className={`tab ${period === 'today' ? 'active' : ''}`} onClick={() => setPeriod('today')}>Hoje</button>
-                    <button className={`tab ${period === 'week' ? 'active' : ''}`} onClick={() => setPeriod('week')}>7 Dias</button>
-                    <button className={`tab ${period === 'month' ? 'active' : ''}`} onClick={() => setPeriod('month')}>30 Dias</button>
-                    <button className={`tab ${period === 'quarter' ? 'active' : ''}`} onClick={() => setPeriod('quarter')}>Trimestre</button>
-                    <button className={`tab ${period === 'year' ? 'active' : ''}`} onClick={() => setPeriod('year')}>Anual</button>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--black-card)', padding: '4px 8px', borderRadius: 'var(--radius-lg)' }}>
+                        <input type="date" value={dateStart} onChange={e => { setDateStart(e.target.value); setPeriod('custom'); }} className="form-input" style={{ width: 130, padding: '4px 8px', height: 32, fontSize: '0.85rem' }} />
+                        <span style={{ color: 'var(--gray-400)', fontSize: '0.85rem' }}>até</span>
+                        <input type="date" value={dateEnd} onChange={e => { setDateEnd(e.target.value); setPeriod('custom'); }} className="form-input" style={{ width: 130, padding: '4px 8px', height: 32, fontSize: '0.85rem' }} />
+                    </div>
+                    <div className="tabs" style={{ background: 'var(--black-card)', padding: 4, margin: 0, borderRadius: 'var(--radius-lg)' }}>
+                        <button className={`tab ${period === 'today' ? 'active' : ''}`} onClick={() => { setPeriod('today'); setDateStart(''); setDateEnd(''); }}>Hoje</button>
+                        <button className={`tab ${period === 'week' ? 'active' : ''}`} onClick={() => { setPeriod('week'); setDateStart(''); setDateEnd(''); }}>7 Dias</button>
+                        <button className={`tab ${period === 'month' ? 'active' : ''}`} onClick={() => { setPeriod('month'); setDateStart(''); setDateEnd(''); }}>30 Dias</button>
+                        <button className={`tab ${period === 'quarter' ? 'active' : ''}`} onClick={() => { setPeriod('quarter'); setDateStart(''); setDateEnd(''); }}>Trimestre</button>
+                        <button className={`tab ${period === 'year' ? 'active' : ''}`} onClick={() => { setPeriod('year'); setDateStart(''); setDateEnd(''); }}>Anual</button>
+                    </div>
                 </div>
             </div>
 

@@ -12,6 +12,9 @@ export default function AdminStock() {
     const [moveReason, setMoveReason] = useState('');
     const [moveType, setMoveType] = useState('add');
     const [loading, setLoading] = useState(true);
+    const [period, setPeriod] = useState('month');
+    const [dateStart, setDateStart] = useState('');
+    const [dateEnd, setDateEnd] = useState('');
     const toast = useToast();
 
     useEffect(() => { load(); }, []);
@@ -22,6 +25,27 @@ export default function AdminStock() {
         setMovements(m.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
         setLoading(false);
     }
+
+    const filteredMovements = movements.filter(m => {
+        const d = new Date(m.created_at);
+        const now = new Date();
+        let startDate = new Date();
+        let endDate = new Date();
+
+        if (period === 'today') startDate.setHours(0, 0, 0, 0);
+        else if (period === 'week') startDate.setDate(now.getDate() - 7);
+        else if (period === 'month') startDate.setMonth(now.getMonth() - 1);
+        else if (period === 'quarter') startDate.setMonth(now.getMonth() - 3);
+        else if (period === 'year') startDate.setFullYear(now.getFullYear() - 1);
+        else if (period === 'custom') {
+            if (dateStart) startDate = new Date(dateStart + 'T00:00:00');
+            else startDate = new Date(2000, 0, 1);
+            if (dateEnd) endDate = new Date(dateEnd + 'T23:59:59');
+        }
+
+        if (period === 'custom') return d >= startDate && d <= endDate;
+        return d >= startDate;
+    });
 
     async function doMovement() {
         if (!moveQty || moveQty <= 0) { toast.error('Quantidade inválida'); return; }
@@ -53,6 +77,21 @@ export default function AdminStock() {
                 <div>
                     <h1 style={{ fontSize: '1.8rem', fontWeight: 800 }}>📦 Painel de Estoque e Patrimônio</h1>
                     <p style={{ color: 'var(--gray-400)', fontSize: '0.9rem' }}>Gestão de capital imobilizado, reposições e movimentações</p>
+                </div>
+
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--black-card)', padding: '4px 8px', borderRadius: 'var(--radius-lg)' }}>
+                        <input type="date" value={dateStart} onChange={e => { setDateStart(e.target.value); setPeriod('custom'); }} className="form-input" style={{ width: 130, padding: '4px 8px', height: 32, fontSize: '0.85rem' }} />
+                        <span style={{ color: 'var(--gray-400)', fontSize: '0.85rem' }}>até</span>
+                        <input type="date" value={dateEnd} onChange={e => { setDateEnd(e.target.value); setPeriod('custom'); }} className="form-input" style={{ width: 130, padding: '4px 8px', height: 32, fontSize: '0.85rem' }} />
+                    </div>
+                    <div className="tabs" style={{ background: 'var(--black-card)', padding: 4, margin: 0, borderRadius: 'var(--radius-lg)' }}>
+                        <button className={`tab ${period === 'today' ? 'active' : ''}`} onClick={() => { setPeriod('today'); setDateStart(''); setDateEnd(''); }}>Hoje</button>
+                        <button className={`tab ${period === 'week' ? 'active' : ''}`} onClick={() => { setPeriod('week'); setDateStart(''); setDateEnd(''); }}>7 Dias</button>
+                        <button className={`tab ${period === 'month' ? 'active' : ''}`} onClick={() => { setPeriod('month'); setDateStart(''); setDateEnd(''); }}>30 Dias</button>
+                        <button className={`tab ${period === 'quarter' ? 'active' : ''}`} onClick={() => { setPeriod('quarter'); setDateStart(''); setDateEnd(''); }}>Trimestre</button>
+                        <button className={`tab ${period === 'year' ? 'active' : ''}`} onClick={() => { setPeriod('year'); setDateStart(''); setDateEnd(''); }}>Anual</button>
+                    </div>
                 </div>
             </div>
 
@@ -130,7 +169,7 @@ export default function AdminStock() {
                 <div className="table-wrapper">
                     <table className="table">
                         <thead><tr><th>Data/Hora</th><th>Produto</th><th>Natureza</th><th>Volumes</th><th>Saldo Anterior</th><th>Saldo Novo</th><th>Origem/Motivo</th></tr></thead>
-                        <tbody>{movements.slice(0, 50).map(m => (
+                        <tbody>{filteredMovements.slice(0, 50).map(m => (
                             <tr key={m.id}>
                                 <td style={{ fontSize: '0.82rem', color: 'var(--gray-400)' }}>{new Date(m.created_at).toLocaleString('pt-BR')}</td>
                                 <td style={{ fontSize: '0.88rem', fontWeight: 600 }}>{m.product_name}</td>
