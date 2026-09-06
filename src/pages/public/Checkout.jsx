@@ -22,11 +22,44 @@ export default function Checkout() {
 
     useEffect(() => {
         if (items.length === 0) navigate('/carrinho');
-        db.getById('settings', 'company').then(s => setSettings(s || {}));
+        db.getById('settings', 'company').then(s => {
+            let sett = s || {};
+            // Provide sensible fallback regions if not configured in the admin dashboard yet
+            if (!sett.delivery_regions || sett.delivery_regions.length === 0) {
+                sett.delivery_regions = [
+                    { name: 'Macaé (Centro, Aroeira, Cajueiros - Proximidades)', price: 0, days: 1 },
+                    { name: 'Macaé (Cavaleiros, Pecado, Região dos Lagos)', price: 10, days: 1 },
+                    { name: 'Macaé (Região Serrana / Afastados)', price: 25, days: 2 }
+                ];
+            }
+            setSettings(sett);
+        });
         if (user) setForm(f => ({ ...f, name: user.name || '', email: user.email || '', phone: user.phone || '' }));
     }, []);
 
     function updateForm(k, v) { setForm(f => ({ ...f, [k]: v })); }
+
+    async function handleCepBlur() {
+        const rawCep = form.zip.replace(/\D/g, '');
+        if (rawCep.length === 8) {
+            try {
+                const res = await fetch(`https://viacep.com.br/ws/${rawCep}/json/`);
+                const data = await res.json();
+                if (!data.erro) {
+                    setForm(f => ({
+                        ...f,
+                        address: data.logradouro || f.address,
+                        neighborhood: data.bairro || f.neighborhood,
+                        city: data.localidade || f.city,
+                        state: data.uf || f.state
+                    }));
+                    toast.success('Endereço auto-preenchido pelo CEP!');
+                }
+            } catch (err) {
+                console.error('Erro na consulta do CEP:', err);
+            }
+        }
+    }
 
     const deliveryFee = form.delivery_type === 'pickup' ? 0 :
         (settings.delivery_regions?.find(r => r.name === form.delivery_region)?.price || 0);
@@ -178,8 +211,8 @@ export default function Checkout() {
                                             <input type="text" className="form-input" value={form.neighborhood} onChange={e => updateForm('neighborhood', e.target.value)} />
                                         </div>
                                         <div className="form-group">
-                                            <label className="form-label">CEP</label>
-                                            <input type="text" className="form-input" value={form.zip} onChange={e => updateForm('zip', e.target.value)} />
+                                            <label className="form-label">CEP (Auto-completa o endereço)</label>
+                                            <input type="text" className="form-input" placeholder="Apenas Números" value={form.zip} onChange={e => updateForm('zip', e.target.value)} onBlur={handleCepBlur} />
                                         </div>
                                     </div>
                                 </>
